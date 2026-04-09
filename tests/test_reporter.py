@@ -4,6 +4,7 @@
 # Strategy:
 #   - print_cli_report  → capture stdout and assert on its content
 #   - write_json_report → write to a temp file, read it back, assert on structure
+#   - write_html_report → write to a temp file, read raw HTML, assert on content
 
 import sys
 import os
@@ -16,7 +17,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from src.reporter import print_cli_report, write_json_report
+from src.reporter import print_cli_report, write_json_report, write_html_report
 
 
 # ---------------------------------------------------------------------------
@@ -168,3 +169,67 @@ def test_json_report_empty_input_writes_valid_json():
     data = _write_to_temp([])
     assert data["modules"] == []
     assert data["metadata"]["total_modules"] == 0
+
+
+# ---------------------------------------------------------------------------
+# write_html_report — content checks
+# ---------------------------------------------------------------------------
+
+def _write_html_to_temp(results: list[dict]) -> str:
+    """Write an HTML report to a temp file and return the raw HTML string."""
+    with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as f:
+        temp_path = f.name
+
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        write_html_report(results, temp_path)
+
+    with open(temp_path, encoding="utf-8") as f:
+        return f.read()
+
+
+def test_html_report_is_valid_html_document():
+    html = _write_html_to_temp(SAMPLE_RESULTS)
+    assert "<!DOCTYPE html>" in html
+    assert "<html"           in html
+    assert "</html>"         in html
+
+
+def test_html_report_contains_all_module_names():
+    html = _write_html_to_temp(SAMPLE_RESULTS)
+    assert "auth"      in html
+    assert "cart"      in html
+    assert "reporting" in html
+
+
+def test_html_report_contains_risk_level_labels():
+    html = _write_html_to_temp(SAMPLE_RESULTS)
+    assert "HIGH"   in html
+    assert "MEDIUM" in html
+    assert "LOW"    in html
+
+
+def test_html_report_applies_colour_classes_per_risk_level():
+    # Each risk level should have its own CSS row class and label class.
+    html = _write_html_to_temp(SAMPLE_RESULTS)
+    assert 'class="high"'        in html
+    assert 'class="medium"'      in html
+    assert 'class="low"'         in html
+    assert 'risk-HIGH'           in html
+    assert 'risk-MEDIUM'         in html
+    assert 'risk-LOW'            in html
+
+
+def test_html_report_contains_table_headers():
+    html = _write_html_to_temp(SAMPLE_RESULTS)
+    assert "Module"       in html
+    assert "Bug Score"    in html
+    assert "Change Score" in html
+    assert "Risk Score"   in html
+    assert "Risk Level"   in html
+
+
+def test_html_report_empty_input_produces_valid_file():
+    html = _write_html_to_temp([])
+    assert "<!DOCTYPE html>" in html
+    assert "<tbody>"         in html

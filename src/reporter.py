@@ -76,6 +76,134 @@ def write_json_report(results: list[dict], output_path: str) -> None:
     print(f"\n  JSON report saved -> {output_path}")
 
 
+def write_html_report(results: list[dict], output_path: str) -> None:
+    """
+    Write a colour-coded HTML report to a file.
+
+    Rows are highlighted by risk level:
+        HIGH   → red background
+        MEDIUM → yellow background
+        LOW    → green background
+
+    The file is self-contained — no external CSS or JS dependencies.
+
+    Args:
+        results:     classified results from classifier.classify()
+        output_path: path to the output HTML file (e.g. "output/report.html")
+    """
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
+    metadata = _build_metadata(results)
+    table_rows = _build_html_rows(results)
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Defect Prediction Report</title>
+  <style>
+    body {{
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 30px;
+      color: #333;
+    }}
+    h1 {{
+      font-size: 1.6rem;
+      margin-bottom: 4px;
+    }}
+    .meta {{
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }}
+    .summary {{
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }}
+    .badge {{
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 1rem;
+      color: #fff;
+    }}
+    .badge-high   {{ background-color: #c0392b; }}
+    .badge-medium {{ background-color: #d4a017; color: #333; }}
+    .badge-low    {{ background-color: #27ae60; }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 800px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      overflow: hidden;
+    }}
+    th {{
+      background-color: #2c3e50;
+      color: #fff;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    td {{
+      padding: 11px 16px;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #e0e0e0;
+    }}
+    tr.high   {{ background-color: #fdecea; }}
+    tr.medium {{ background-color: #fef9e7; }}
+    tr.low    {{ background-color: #eafaf1; }}
+    tr:last-child td {{ border-bottom: none; }}
+    .risk-label {{
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }}
+    .risk-HIGH   {{ background-color: #c0392b; color: #fff; }}
+    .risk-MEDIUM {{ background-color: #d4a017; color: #333; }}
+    .risk-LOW    {{ background-color: #27ae60; color: #fff; }}
+  </style>
+</head>
+<body>
+  <h1>Defect Prediction Report</h1>
+  <p class="meta">Generated: {metadata['generated_at']} &nbsp;|&nbsp; {metadata['total_modules']} modules analysed</p>
+
+  <div class="summary">
+    <div class="badge badge-high">{metadata['high_risk']} HIGH</div>
+    <div class="badge badge-medium">{metadata['medium_risk']} MEDIUM</div>
+    <div class="badge badge-low">{metadata['low_risk']} LOW</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Module</th>
+        <th>Bug Score</th>
+        <th>Change Score</th>
+        <th>Risk Score</th>
+        <th>Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {table_rows}
+    </tbody>
+  </table>
+</body>
+</html>"""
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"  HTML report saved -> {output_path}")
+
+
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
@@ -93,6 +221,21 @@ def _build_summary(results: list[dict]) -> str:
         f"{counts['MEDIUM']} MEDIUM  |  "
         f"{counts['LOW']} LOW\n"
     )
+
+
+def _build_html_rows(results: list[dict]) -> str:
+    """Build the HTML table rows, one per module."""
+    rows = []
+    for r in results:
+        level = r["risk_level"]
+        rows.append(f"""      <tr class="{level.lower()}">
+        <td>{r['module']}</td>
+        <td>{r['bug_score']:.2f}</td>
+        <td>{r['change_score']:.2f}</td>
+        <td>{r['risk_score']:.2f}</td>
+        <td><span class="risk-label risk-{level}">{level}</span></td>
+      </tr>""")
+    return "\n".join(rows)
 
 
 def _build_metadata(results: list[dict]) -> dict:
