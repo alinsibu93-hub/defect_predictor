@@ -1,0 +1,16 @@
+bug_id,module,severity,reported_date,status
+BUG-001,auth,high,2025-10-05,closed
+BUG-002,auth,critical,2025-10-18,closed
+BUG-003,payment,medium,2025-10-22,closed
+BUG-004,cart,low,2025-11-01,closed
+BUG-005,auth,high,2025-11-10,closed
+BUG-006,payment,critical,2025-11-14,closed
+BUG-007,payment,high,2025-11-28,closed
+BUG-008,auth,medium,2025-12-03,closed
+BUG-009,notifications,low,2025-12-07,closed
+BUG-010,cart,medium,2025-12-12,closed
+BUG-011,payment,critical,2026-01-20,open
+BUG-012,auth,high,2026-02-25,open
+BUG-013,reporting,low,2026-02-28,closed
+BUG-014,cart,high,2026-03-02,open
+BUG-015,notifications,medium,2026-03-05,closed
